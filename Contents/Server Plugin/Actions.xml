@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<Actions>
+    <Action id="updateSonosFromCBus">
+        <Name>Match Sonos to C-Bus Group</Name>
+        <CallbackMethod>updateSonos</CallbackMethod>
+        <ConfigUI>
+            <Field id="sonosZone" type="menu">
+                <Label>Sonos Zone:</Label>
+                <List class="self" filter="stuff" method="sonosZoneList"/>
+            </Field>
+        </ConfigUI>
+    </Action>
+</Actions>

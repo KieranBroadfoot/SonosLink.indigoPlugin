@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<PluginConfig>
+    <Field id="RadioLabel" type="label" fontSize="small" fontColor="darkgray">
+        <Label>Choose a default favourite radio station to play when a Sonos zone is started and there is no queue present.</Label>
+    </Field>
+    <Field id="sonosRadio" type="textfield" defaultValue="x-sonosapi-stream:s24940?sid=254&amp;flags=32">
+        <Label>Radio Station:</Label>
+    </Field>
+</PluginConfig>
