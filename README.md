@@ -1,38 +1,27 @@
 SonosLink.indigoPlugin
 ======================
 
-Custom plugin to link/mirror Sonos Devices with C-Bus groups.  This provides control of Sonos from DLT switches.
+Custom plugin to link/mirror Sonos Devices with C-Bus groups for [Indigo Domotics Indigo 7](http://www.indigodomo.com).  This provides control of Sonos from DLT switches.
 
 Requirements
 ------------
 
 This plugin requires:
 
-* C-Bus Plugin >= 0.0.5
+* Indigo >= 7.0
+* C-Bus Plugin >= 1.0
 * Sonos Plugin >= 0.8.13
-* Global Property Manager Plugin >= 1.0.0
-
-The plugin currently presumes every Zone Player in your system has an associated C-Bus group available to be linked.
+* Global Property Manager Plugin >= 1.0.2
 
 Setup
 -----
 
-### Sonos -> C-Bus
-
-For each Sonos ZonePlayer use the Global Property Manager to define a custom attribute named "cbus" with a value of the C-Bus group address.  The plugin will automatically sync the c-bus group to Sonos once these properties are in place.
-
-### C-Bus to Sonos
-
-A trigger per Sonos zone is required to link user initiated changes in C-Bus to Sonos.  Each trigger should be configured as follows:
-
-* Trigger: C-Bus Event - Group Manually Changed - Group: group_name, Change: Any
-* Conditions: Always
-* Action: SonosLink - Match Sonos to C-Bus Group - Zone: zone_name
+For each Sonos ZonePlayer use the Global Property Manager to define a custom attribute named "cbus" with a value of the C-Bus group address.  The plugin will automatically sync the c-bus group to Sonos once these properties are in place.  As of v1.0 this plugin has been integrated with my C-Bus plugin using Indigo broadcasts and therefore any previous actions to link C-Bus to Sonos are deprecated.
 
 Behaviour
 ---------
 
-When a group is manually changed in C-Bus the plugin will update Sonos.  The behaviours are as follows:
+When a group is manually changed on a C-Bus switch the plugin will update Sonos.  The behaviours are as follows:
  
 * Zone paused and C-Bus set > 0 - Play
 * Zone playing and C-Bus set to 0 - Pause

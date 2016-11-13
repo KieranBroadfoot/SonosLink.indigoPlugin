@@ -1,43 +1,50 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 ####################
-# Copyright (c) 2015, Kieran J. Broadfoot. All rights reserved.
+# Copyright (c) 2016, Kieran J. Broadfoot. All rights reserved.
 # http://kieranbroadfoot.com
-#
 
-################################################################################
-# Imports
-################################################################################
 import sys
 import os
 import time
 import re
 
-################################################################################
 class Plugin(indigo.PluginBase):
 
-    ########################################
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs): 
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
         self.defaultRadio = pluginPrefs.get("sonosRadio", "x-sonosapi-stream:s24940?sid=254&flags=32")
         self.sonosPlugin = indigo.server.getPlugin("com.ssi.indigoplugin.Sonos")
         self.initStates()
         indigo.devices.subscribeToChanges()
+        indigo.server.subscribeToBroadcast("uk.co.l1fe.indigoplugin.C-Bus", u"lightingStateManuallyChanged", u"broadcastReceiver")
         
     def initStates(self):
         for player in indigo.devices.iter("com.ssi.indigoplugin.Sonos.ZonePlayer"):
             # for each player let's set the c-bus channels accordingly
             channel = self.getAssociatedGroup(player)
-            if player.states["ZP_STATE"] == "PLAYING":
-                self.updateChannel(channel, int(player.states["ZP_VOLUME"]))
-            if player.states["ZP_STATE"] == "PAUSED" or player.states["ZP_STATE"] == "STOPPED":
-                self.updateChannel(channel, 0)
+            if channel:
+                if player.states["ZP_STATE"] == "PLAYING":
+                    self.updateChannel(channel, int(player.states["ZP_VOLUME"]))
+                if player.states["ZP_STATE"] == "PAUSED" or player.states["ZP_STATE"] == "STOPPED":
+                    self.updateChannel(channel, 0)
 
     def getAssociatedGroup(self, device):
-        channelAddr = device.globalProps["com.indigodomo.indigoserver"].get("cbus", None)
-        for group in indigo.devices.iter("uk.co.l1fe.indigoplugin.C-Bus"):
-            if group.address == channelAddr:
-                return group
+        try:
+            channelAddr = device.globalProps["com.indigodomo.indigoserver"].get("cbus", None)
+            for group in indigo.devices.iter("uk.co.l1fe.indigoplugin.C-Bus"):
+                if group.address == channelAddr:
+                    return group
+        except KeyError:
+            self.logger.warn("global property (cbus) not available for "+device.name)
+            return False
+
+    def getAssociatedSonos(self, address):
+        for player in indigo.devices.iter("com.ssi.indigoplugin.Sonos.ZonePlayer"):
+            linkedChannel = self.getAssociatedGroup(player)
+            if address == linkedChannel.address:
+                return linkedChannel, player
+        return None, None
 
     def updateChannel(self, channel, brightness):
         if brightness <= 95:
@@ -46,22 +53,36 @@ class Plugin(indigo.PluginBase):
     def deviceUpdated(self, old, new):
         if new.model == "Sonos Zone Player":
             channel = self.getAssociatedGroup(new)
-            if new.states["ZP_STATE"] == "PLAYING":
-                vol = int(new.states["ZP_VOLUME"])
-                if channel.brightness != vol and abs(channel.brightness-vol) > 5:
-                    self.updateChannel(channel, int(new.states["ZP_VOLUME"]))
-                    return
-            if new.states["ZP_STATE"] == "PAUSED" or new.states["ZP_STATE"] == "STOPPED":
-                if channel.brightness != 0:
-                    self.updateChannel(channel, 0)
-                    return
+            if channel:
+                if new.states["ZP_STATE"] == "PLAYING":
+                    if new.states["ZP_VOLUME"]:
+                        vol = int(new.states["ZP_VOLUME"])
+                        if channel.brightness != vol and abs(channel.brightness-vol) > 5:
+                            self.updateChannel(channel, int(new.states["ZP_VOLUME"]))
+                            return
+                if new.states["ZP_STATE"] == "PAUSED" or new.states["ZP_STATE"] == "STOPPED":
+                    if channel.brightness != 0:
+                        self.updateChannel(channel, 0)
+                        return
+
+    def broadcastReceiver(self, payload):
+        # we received a broadcast message from the C-Bus plugin informing us of a manual switch change
+        channel, player = self.getAssociatedSonos(payload["deviceAddress"])
+        if player:
+            self.executeAction(channel, player)
 
     def updateSonos(self, action, dev):
+        # someone called the updateSonosFromCBus action - as of v1.0 this should be deprecated
+        self.logger.warn("as of v1.0 this action is deprecated and will be removed in the future")
         if not action.props.get("sonosZone",""):
-            indigo.server.log("SonosLink Update: No zone ID provided.")
+            self.logger.warn("SonosLink Update: No zone ID provided.")
             return
         player = indigo.devices[action.props.get("sonosZone","")]
         channel = self.getAssociatedGroup(player)
+        if channel:
+            self.executeAction(channel, player)
+
+    def executeAction(self, channel, player):
         if player.states["ZP_STATE"] == "PLAYING":
             if channel.brightness == 0:
                 if ',' in player.states['ZonePlayerUUIDsInGroup']:
@@ -96,6 +117,7 @@ class Plugin(indigo.PluginBase):
                 return
 
     def sonosZoneList(self, filter="", valuesDict=None, typeId="", targetId=0):
+        self.logger.warn("as of v1.0 this action is deprecated and will be removed in the future")
         zones = []
         for player in indigo.devices.iter("com.ssi.indigoplugin.Sonos.ZonePlayer"):
             zones.append([player.name, player.name])
